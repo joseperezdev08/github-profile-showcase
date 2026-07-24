@@ -3,12 +3,12 @@
 [![CI](https://github.com/joseperezdev08/github-profile-showcase/actions/workflows/ci.yml/badge.svg)](https://github.com/joseperezdev08/github-profile-showcase/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-237a4b.svg)](LICENSE)
 
-Aplicación full-stack que consulta un perfil mediante una API en **NestJS** y lo
-renderiza en el servidor con **Next.js**. El proyecto prioriza una solución
-pequeña, legible y fácil de explicar, sin introducir infraestructura que el reto
-no necesita.
+Aplicación full-stack que presenta un perfil de GitHub y su actividad pública
+reciente. Una API en **NestJS** consolida los datos oficiales de GitHub y una
+interfaz **Next.js** los renderiza en el servidor con una experiencia pensada
+para una revisión rápida por parte de reclutadores.
 
-![Vista principal de GitHub Profile Showcase](docs/preview.png)
+![Vista principal de GitHub Profile Showcase](docs/preview.jpg)
 
 ## Arquitectura
 
@@ -16,21 +16,24 @@ no necesita.
 flowchart LR
     Browser["Navegador"] --> Next["Next.js 16\nServer Component"]
     Next -->|"GET /user/:username"| Nest["NestJS 11\nREST API"]
-    Nest --> GitHub["GitHub REST API"]
+    Nest --> Rest["GitHub REST API\nPerfil público"]
+    Nest --> GraphQL["GitHub GraphQL API\nActividad y repositorios públicos"]
 ```
 
-- **Next.js** realiza la consulta desde un Server Component. El navegador recibe
-  HTML ya renderizado y no repite la petición.
-- **NestJS** separa el transporte HTTP de la integración con GitHub mediante un
-  controlador y un servicio inyectable.
-- **GitHubService** valida el username, aplica timeout, transforma el contrato
-  externo y traduce errores del proveedor a estados HTTP claros.
+- **Next.js** realiza un único fetch desde un Server Component. El navegador
+  recibe HTML renderizado y nunca consulta GitHub directamente.
+- **NestJS** mantiene un controlador HTTP delgado y un servicio que valida,
+  consulta, pagina, agrega y transforma la información externa.
+- **GitHub REST** proporciona los datos básicos del perfil. **GitHub GraphQL**
+  aporta repositorios públicos, contribuciones y pull requests.
+- Las respuestas externas se convierten a un contrato propio y estable en
+  `camelCase`.
 
 ## Tecnologías
 
 - Node.js 22, TypeScript 5.9 y pnpm.
-- NestJS 11 con ConfigModule y `fetch` nativo.
-- Next.js 16, React 19 y App Router.
+- NestJS 11, ConfigModule y `fetch` nativo.
+- Next.js 16, React 19, App Router y Server Components.
 - Jest, Supertest, ESLint y Prettier.
 - GitHub Actions para integración continua.
 
@@ -41,78 +44,131 @@ flowchart LR
 ├── apps/
 │   ├── api/    # NestJS con package.json y pnpm-lock.yaml propios
 │   └── web/    # Next.js con package.json y pnpm-lock.yaml propios
-├── docs/       # Captura de la aplicación
+├── docs/       # Captura real de la aplicación
 └── .github/    # Workflow de CI
 ```
+
+Las aplicaciones comparten el repositorio, pero conservan instalaciones,
+scripts y lockfiles independientes.
 
 ## API
 
 ### `GET /user/:username`
 
-Ejemplo:
-
 ```bash
 curl http://localhost:3001/user/joseperezdev08
 ```
 
-Respuesta:
+Contrato de respuesta:
 
-```json
-{
-  "username": "joseperezdev08",
-  "name": "Jose Alejandro Perez Chavez",
-  "bio": "Full-stack Developer | TypeScript, Next.js, NestJS y productos web de extremo a extremo.",
-  "avatarUrl": "https://avatars.githubusercontent.com/...",
-  "profileUrl": "https://github.com/joseperezdev08",
-  "email": null,
-  "location": "Mexico",
-  "company": null,
-  "website": null,
-  "twitterUsername": "jackinjaxx01",
-  "publicRepositories": 22,
-  "followers": 4,
-  "following": 4,
-  "createdAt": "2022-01-02T17:20:26Z",
-  "updatedAt": "2026-07-24T17:43:47Z"
+```ts
+interface GitHubUserResponse {
+  username: string;
+  name: string | null;
+  bio: string | null;
+  avatarUrl: string;
+  profileUrl: string;
+  email: string | null;
+  location: string | null;
+  company: string | null;
+  website: string | null;
+  twitterUsername: string | null;
+  publicRepositories: number;
+  publicGists: number;
+  followers: number;
+  following: number;
+  createdAt: string;
+  updatedAt: string;
+  repositoryMetrics: {
+    starsReceived: number;
+    forksReceived: number;
+    topLanguages: Array<{
+      name: string;
+      color: string | null;
+      repositoryCount: number;
+    }>;
+  };
+  contributions: {
+    from: string;
+    to: string;
+    total: number;
+    restricted: number;
+    commits: number;
+    issues: number;
+    pullRequests: number;
+    reviews: number;
+    repositoriesContributedTo: number;
+    calendar: Array<{
+      date: string;
+      count: number;
+      level: 0 | 1 | 2 | 3 | 4;
+    }>;
+  };
+  publicPullRequests: {
+    total: number;
+    recent: Array<{
+      title: string;
+      url: string;
+      repository: string;
+      state: 'OPEN' | 'CLOSED' | 'MERGED';
+      isDraft: boolean;
+      createdAt: string;
+      mergedAt: string | null;
+    }>;
+  };
 }
 ```
 
-Los campos opcionales conservan `null` cuando GitHub no los expone. El frontend
-solo renderiza los valores disponibles.
+Los campos opcionales conservan `null` cuando GitHub no los expone y el
+frontend los omite de forma natural.
 
-| Estado | Significado                                 |
-| ------ | ------------------------------------------- |
-| `200`  | Perfil encontrado                           |
-| `400`  | Username inválido                           |
-| `404`  | Usuario inexistente                         |
-| `429`  | Límite de peticiones de GitHub              |
-| `502`  | Error de conexión o respuesta del proveedor |
+| Estado | Significado                                     |
+| ------ | ----------------------------------------------- |
+| `200`  | Perfil encontrado                               |
+| `400`  | Username inválido                               |
+| `404`  | Usuario inexistente                             |
+| `429`  | Límite de peticiones de GitHub                  |
+| `502`  | Error de red o respuesta inválida del proveedor |
+| `503`  | Falta configurar el token requerido para GitHub |
+
+## Privacidad
+
+La aplicación trabaja exclusivamente con información pública:
+
+- Los repositorios se consultan con `privacy: PUBLIC`.
+- Los pull requests usan la búsqueda `is:pr author:<username> is:public`.
+- Los cálculos de estrellas, forks y lenguajes descartan defensivamente
+  cualquier nodo que no sea público.
+- `restricted` es únicamente el conteo anónimo que GitHub devuelve cuando una
+  persona decidió mostrar sus contribuciones privadas. No se exponen nombres,
+  repositorios, títulos ni enlaces privados.
+- No se muestran insignias o _Achievements_: GitHub no los ofrece mediante su
+  API oficial y el proyecto no utiliza scraping.
 
 ## Ejecución local
 
 ### Requisitos
 
 - Node.js `>= 22`
-- Corepack habilitado
+- pnpm disponible globalmente
+- Un token de GitHub con acceso mínimo de lectura a información pública
 
 ### Instalación
 
 ```bash
-corepack enable
 pnpm --dir apps/api install
 pnpm --dir apps/web install
 cp apps/api/.env.example apps/api/.env
 cp apps/web/.env.example apps/web/.env.local
 ```
 
-Inicia cada aplicación en una terminal independiente:
+Configura `GITHUB_TOKEN` en `apps/api/.env` y ejecuta cada aplicación en una
+terminal independiente:
 
 ```bash
 pnpm --dir apps/api dev
 pnpm --dir apps/web dev
 ```
-
-Servicios disponibles:
 
 - Frontend: [http://localhost:3000](http://localhost:3000)
 - Backend: [http://localhost:3001/user/joseperezdev08](http://localhost:3001/user/joseperezdev08)
@@ -123,63 +179,69 @@ Backend (`apps/api/.env`):
 
 | Variable       | Requerida | Descripción                                       |
 | -------------- | --------- | ------------------------------------------------- |
+| `GITHUB_TOKEN` | Sí        | Token para consumir GitHub GraphQL.               |
 | `PORT`         | No        | Puerto de la API. Por defecto `3001`.             |
 | `FRONTEND_URL` | No        | Orígenes permitidos por CORS, separados por coma. |
-| `GITHUB_TOKEN` | No        | Aumenta el límite de peticiones de GitHub.        |
 
 Frontend (`apps/web/.env.local`):
 
-| Variable          | Requerida | Descripción                       |
-| ----------------- | --------- | --------------------------------- |
-| `API_URL`         | No        | URL interna de la API NestJS.     |
-| `GITHUB_USERNAME` | No        | Usuario que se muestra al cargar. |
+| Variable          | Requerida | Descripción                               |
+| ----------------- | --------- | ----------------------------------------- |
+| `API_URL`         | No        | URL interna de NestJS; por defecto local. |
+| `GITHUB_USERNAME` | No        | Perfil mostrado; usa `joseperezdev08`.    |
 
-Las variables del frontend son server-only: no se exponen mediante el prefijo
+Las variables del frontend son server-only; ninguna usa el prefijo
 `NEXT_PUBLIC_`.
 
 ## Comandos
 
-Cada aplicación administra sus comandos, dependencias y lockfile de manera
-independiente.
-
 ```bash
-pnpm --dir apps/api dev       # Ejecuta el backend
-pnpm --dir apps/api check     # Verifica el backend
-pnpm --dir apps/web dev       # Ejecuta el frontend
-pnpm --dir apps/web check     # Verifica el frontend
+pnpm --dir apps/api dev       # Backend en desarrollo
+pnpm --dir apps/api check     # Formato, lint, tipos, tests y build
+pnpm --dir apps/web dev       # Frontend en desarrollo
+pnpm --dir apps/web check     # Formato, lint, tipos y build
 ```
 
 ## Decisiones técnicas
 
-### ¿Por qué SSR?
+### SSR sin una segunda petición
 
-`app/page.tsx` es un Server Component y usa `cache: "no-store"`. Cada visita
-obtiene información actualizada desde el endpoint NestJS antes de generar el
-HTML. Esto evita estados de carga y una llamada adicional desde el navegador.
+`app/page.tsx` es un Server Component y solicita
+`API_URL/user/GITHUB_USERNAME` con `cache: "no-store"`. Cada visita obtiene
+información reciente desde NestJS antes de producir el HTML, sin fetch desde el
+navegador.
 
-### ¿Por qué no hay más capas?
+### REST y GraphQL con un solo endpoint propio
 
-El dominio no contiene reglas de negocio complejas ni persistencia. Un
-controlador delgado y un servicio de integración ofrecen separación de
-responsabilidades, inyección de dependencias y pruebas aisladas sin convertir
-el reto en una arquitectura ceremonial.
+REST mantiene la lectura del perfil básico compatible con un token de mínimo
+privilegio. GraphQL permite obtener el calendario, la actividad y los
+repositorios públicos de manera estructurada. El frontend no necesita conocer
+esa composición: consume un único contrato.
 
-### ¿Cómo se manejan los fallos?
+### Agregaciones correctas y acotadas
 
-La API valida la entrada antes de llamar a GitHub, limita cada consulta a cinco
-segundos y traduce los errores externos. Next.js incorpora `loading.tsx` y
-`error.tsx` para cubrir espera y recuperación, mientras `next/image` y
-`next/font` optimizan los recursos visuales.
+El backend pagina todos los repositorios públicos para calcular estrellas,
+forks y los cinco lenguajes con presencia en más repositorios. La interfaz
+muestra como máximo cinco pull requests recientes, pero conserva el total
+histórico que informa GitHub.
+
+### Arquitectura proporcional al reto
+
+No hay persistencia ni reglas de dominio complejas. Un controlador delgado y un
+servicio de integración ofrecen separación de responsabilidades, inyección de
+dependencias y pruebas aisladas sin añadir capas ceremoniales.
 
 ## Pruebas
 
-La suite cubre:
+La suite del backend cubre transformación GraphQL, campos nulos, calendario,
+niveles, paginación, agregación de estrellas, forks y lenguajes, pull requests
+públicos, descarte de nodos privados, token ausente, validación del username,
+usuario inexistente, rate limit, errores GraphQL, HTTP y de red. También incluye
+una prueba e2e del endpoint con el proveedor sustituido.
 
-- Transformación de `snake_case` a `camelCase` y campos opcionales.
-- Validación del username sin realizar peticiones innecesarias.
-- Usuario inexistente, rate limit, error del proveedor y error de red.
-- Endpoint HTTP con el servicio de GitHub sustituido mediante inyección.
-- Lint, type-check, build y formato de ambas aplicaciones.
+El frontend se valida con formato, lint, type-check y build de producción. La
+integración local confirma que el perfil llega dentro del HTML SSR y que no
+existe un fetch del perfil desde el navegador.
 
 ```bash
 pnpm --dir apps/api check
@@ -188,8 +250,8 @@ pnpm --dir apps/web check
 
 ## Despliegue
 
-El repositorio queda preparado para desplegar frontend y backend por separado.
-Esta entrega no incluye todavía un despliegue público.
+El repositorio está preparado para desplegar frontend y backend por separado.
+Esta etapa no incluye todavía URLs públicas de las aplicaciones.
 
 ## Licencia
 

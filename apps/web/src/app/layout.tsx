@@ -17,9 +17,9 @@ const ibmPlexMono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Jose Perez — GitHub Profile',
+  title: 'Jose Perez — Actividad en GitHub',
   description:
-    'Perfil de GitHub de Jose Alejandro Perez, servido por NestJS y renderizado con Next.js.',
+    'Perfil, repositorios y contribuciones públicas de Jose Alejandro Perez, servido por NestJS y renderizado con Next.js.',
 };
 
 export const viewport: Viewport = {

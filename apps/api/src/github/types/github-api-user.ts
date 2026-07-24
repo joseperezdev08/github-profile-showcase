@@ -7,9 +7,10 @@ export interface GitHubApiUser {
   email: string | null;
   location: string | null;
   company: string | null;
-  blog: string;
+  blog: string | null;
   twitter_username: string | null;
   public_repos: number;
+  public_gists: number;
   followers: number;
   following: number;
   created_at: string;

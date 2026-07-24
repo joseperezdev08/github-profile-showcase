@@ -4,7 +4,7 @@ export default function ErrorPage({ reset }: { reset: () => void }) {
   return (
     <main className="feedback-page">
       <div className="feedback-card">
-        <p className="username">ERROR DE CONEXIÓN</p>
+        <p className="eyebrow">ERROR DE CONEXIÓN</p>
         <h1>No pudimos cargar el perfil.</h1>
         <p>
           Verifica que la API de NestJS esté disponible e intenta nuevamente.

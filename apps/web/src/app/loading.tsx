@@ -14,6 +14,7 @@ export default function Loading() {
           <div className="skeleton skeleton-stats" />
         </div>
       </div>
+      <div className="skeleton skeleton-panel" />
     </main>
   );
 }
