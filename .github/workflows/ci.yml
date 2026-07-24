@@ -27,9 +27,18 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
+          cache-dependency-path: |
+            apps/api/pnpm-lock.yaml
+            apps/web/pnpm-lock.yaml
 
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+      - name: Install API dependencies
+        run: pnpm --dir apps/api install --frozen-lockfile
 
-      - name: Verify project
-        run: pnpm check
+      - name: Install web dependencies
+        run: pnpm --dir apps/web install --frozen-lockfile
+
+      - name: Verify API
+        run: pnpm --dir apps/api check
+
+      - name: Verify web
+        run: pnpm --dir apps/web check

@@ -28,7 +28,7 @@ flowchart LR
 
 ## Tecnologías
 
-- Node.js 22, TypeScript 5.9 y pnpm workspaces.
+- Node.js 22, TypeScript 5.9 y pnpm.
 - NestJS 11 con ConfigModule y `fetch` nativo.
 - Next.js 16, React 19 y App Router.
 - Jest, Supertest, ESLint y Prettier.
@@ -39,8 +39,8 @@ flowchart LR
 ```text
 .
 ├── apps/
-│   ├── api/    # Endpoint NestJS
-│   └── web/    # Interfaz Next.js con SSR
+│   ├── api/    # NestJS con package.json y pnpm-lock.yaml propios
+│   └── web/    # Next.js con package.json y pnpm-lock.yaml propios
 ├── docs/       # Captura de la aplicación
 └── .github/    # Workflow de CI
 ```
@@ -99,10 +99,17 @@ solo renderiza los valores disponibles.
 
 ```bash
 corepack enable
-pnpm install
+pnpm --dir apps/api install
+pnpm --dir apps/web install
 cp apps/api/.env.example apps/api/.env
 cp apps/web/.env.example apps/web/.env.local
-pnpm dev
+```
+
+Inicia cada aplicación en una terminal independiente:
+
+```bash
+pnpm --dir apps/api dev
+pnpm --dir apps/web dev
 ```
 
 Servicios disponibles:
@@ -132,14 +139,14 @@ Las variables del frontend son server-only: no se exponen mediante el prefijo
 
 ## Comandos
 
+Cada aplicación administra sus comandos, dependencias y lockfile de manera
+independiente.
+
 ```bash
-pnpm dev          # Ejecuta API y frontend
-pnpm lint         # Revisa ambos proyectos
-pnpm typecheck    # Valida TypeScript
-pnpm test         # Pruebas unitarias del backend
-pnpm test:e2e     # Prueba HTTP del endpoint
-pnpm build        # Compila ambas aplicaciones
-pnpm check        # Ejecuta toda la verificación de CI
+pnpm --dir apps/api dev       # Ejecuta el backend
+pnpm --dir apps/api check     # Verifica el backend
+pnpm --dir apps/web dev       # Ejecuta el frontend
+pnpm --dir apps/web check     # Verifica el frontend
 ```
 
 ## Decisiones técnicas
@@ -175,7 +182,8 @@ La suite cubre:
 - Lint, type-check, build y formato de ambas aplicaciones.
 
 ```bash
-pnpm check
+pnpm --dir apps/api check
+pnpm --dir apps/web check
 ```
 
 ## Despliegue
