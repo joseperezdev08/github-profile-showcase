@@ -1,2 +1,7 @@
+node_modules
+dist
+.next
+coverage
 apps/web/next-env.d.ts
 pnpm-lock.yaml
+docs/preview.png
