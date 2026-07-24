@@ -20,7 +20,7 @@ export default async function Home() {
       <PublicWork profile={profile} />
 
       <footer className="site-footer">
-        <p>Datos públicos obtenidos mediante GitHub GraphQL API.</p>
+        <p>Datos públicos obtenidos mediante GitHub REST y GraphQL API.</p>
         <p>NestJS API → Next.js Server Component</p>
       </footer>
     </main>

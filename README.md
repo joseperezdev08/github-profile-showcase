@@ -22,8 +22,8 @@ flowchart LR
 
 - **Next.js** realiza un único fetch desde un Server Component. El navegador
   recibe HTML renderizado y nunca consulta GitHub directamente.
-- **NestJS** mantiene un controlador HTTP delgado y un servicio que valida,
-  consulta, pagina, agrega y transforma la información externa.
+- **NestJS** mantiene un controlador HTTP delgado, un servicio que valida y
+  orquesta, un cliente dedicado a GitHub y un mapper puro para el contrato.
 - **GitHub REST** proporciona los datos básicos del perfil. **GitHub GraphQL**
   aporta repositorios públicos, contribuciones y pull requests.
 - Las respuestas externas se convierten a un contrato propio y estable en
@@ -31,7 +31,7 @@ flowchart LR
 
 ## Tecnologías
 
-- Node.js 22, TypeScript 5.9 y pnpm.
+- Node.js 22, TypeScript 5.9 y pnpm con lockfiles y políticas de confianza.
 - NestJS 11, ConfigModule y `fetch` nativo.
 - Next.js 16, React 19, App Router y Server Components.
 - Jest, Supertest, ESLint y Prettier.
@@ -227,17 +227,20 @@ histórico que informa GitHub.
 
 ### Arquitectura proporcional al reto
 
-No hay persistencia ni reglas de dominio complejas. Un controlador delgado y un
-servicio de integración ofrecen separación de responsabilidades, inyección de
-dependencias y pruebas aisladas sin añadir capas ceremoniales.
+No hay persistencia ni reglas de dominio complejas. El controlador se limita al
+transporte HTTP, el servicio representa el caso de uso, `GitHubClient` encapsula
+la API externa y el mapper realiza transformaciones deterministas. Esta
+separación permite probar cada motivo de cambio sin añadir DDD, repositorios o
+capas ceremoniales.
 
 ## Pruebas
 
-La suite del backend cubre transformación GraphQL, campos nulos, calendario,
-niveles, paginación, agregación de estrellas, forks y lenguajes, pull requests
-públicos, descarte de nodos privados, token ausente, validación del username,
-usuario inexistente, rate limit, errores GraphQL, HTTP y de red. También incluye
-una prueba e2e del endpoint con el proveedor sustituido.
+Las pruebas del backend se organizan por responsabilidad: cliente externo,
+orquestación y mapper puro. Cubren transformación GraphQL, campos nulos,
+calendario, niveles, paginación, agregación de estrellas, forks y lenguajes,
+pull requests públicos, descarte de nodos privados, token ausente, validación
+del username, usuario inexistente, rate limit, errores GraphQL, HTTP y de red.
+También incluyen una prueba e2e del endpoint con el proveedor sustituido.
 
 El frontend se valida con formato, lint, type-check y build de producción. La
 integración local confirma que el perfil llega dentro del HTML SSR y que no
