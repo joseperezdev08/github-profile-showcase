@@ -253,8 +253,15 @@ pnpm --dir apps/web check
 
 ## Despliegue
 
-El repositorio está preparado para desplegar frontend y backend por separado.
-Esta etapa no incluye todavía URLs públicas de las aplicaciones.
+Las dos aplicaciones se despliegan como proyectos independientes de Vercel
+desde el mismo repositorio:
+
+- Frontend: [github-profile-showcase-web.vercel.app](https://github-profile-showcase-web.vercel.app)
+- Backend: [github-profile-showcase-kappa.vercel.app](https://github-profile-showcase-kappa.vercel.app)
+
+Cada proyecto usa su propia carpeta raíz (`apps/web` y `apps/api`,
+respectivamente) y conserva sus dependencias, variables y proceso de build
+independientes.
 
 ## Licencia
 
